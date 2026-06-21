@@ -11,21 +11,21 @@ The project follows a standard decoupled client-server architecture.
 
 ```mermaid
 graph TD
-    subgraph Frontend [Frontend (React + Vite)]
-        UI[User Interface] --> State[AuthContext]
-        UI --> Pages[Pages: Dashboard, Expenses, etc.]
-        Pages --> APIClient[Axios API Service]
+    subgraph Frontend ["Frontend (React + Vite)"]
+        UI["User Interface"] --> State["AuthContext"]
+        UI --> Pages["Pages: Dashboard, Expenses, etc."]
+        Pages --> APIClient["Axios API Service"]
     end
 
-    subgraph Backend [Backend (Node.js + Express)]
-        APIClient -- HTTP / REST --> Router[Express Router]
-        Router --> Middleware[Auth / Rate Limiting / Error Handling]
-        Middleware --> Controllers[Controllers]
-        Controllers --> Models[Mongoose Models]
+    subgraph Backend ["Backend (Node.js + Express)"]
+        APIClient -->|"HTTP / REST"| Router["Express Router"]
+        Router --> Middleware["Auth / Rate Limiting / Error Handling"]
+        Middleware --> Controllers["Controllers"]
+        Controllers --> Models["Mongoose Models"]
     end
 
-    subgraph Database [Database]
-        Models -- Mongoose/MongoDB --> DB[(MongoDB Database)]
+    subgraph Database ["Database"]
+        Models -->|"Mongoose/MongoDB"| DB[("MongoDB Database")]
     end
 ```
 
@@ -81,22 +81,22 @@ Here is how data flows through the system when a user adds a new expense:
 ```mermaid
 sequenceDiagram
     participant User
-    participant Frontend (React)
-    participant API (Axios)
-    participant Backend (Express)
-    participant Database (MongoDB)
+    participant Frontend as Frontend (React)
+    participant API as API (Axios)
+    participant Backend as Backend (Express)
+    participant Database as Database (MongoDB)
 
-    User->>Frontend (React): Fills Expense Form & Submits
-    Frontend (React)->>API (Axios): Formats data & calls POST /api/expenses
-    API (Axios)->>Backend (Express): HTTP POST with Bearer JWT Token
-    Backend (Express)->>Backend (Express): Auth Middleware verifies Token
-    Backend (Express)->>Backend (Express): ExpenseController validates payload
-    Backend (Express)->>Database (MongoDB): Expense.create({ data })
-    Database (MongoDB)-->>Backend (Express): Returns inserted document
-    Backend (Express)-->>API (Axios): 201 Created (JSON Response)
-    API (Axios)-->>Frontend (React): Returns success
-    Frontend (React)->>Frontend (React): Updates local state (Expenses list)
-    Frontend (React)-->>User: Shows Success Toast & updates UI
+    User->>Frontend: Fills Expense Form & Submits
+    Frontend->>API: Formats data & calls POST /api/expenses
+    API->>Backend: HTTP POST with Bearer JWT Token
+    Backend->>Backend: Auth Middleware verifies Token
+    Backend->>Backend: ExpenseController validates payload
+    Backend->>Database: Expense.create({ data })
+    Database-->>Backend: Returns inserted document
+    Backend-->>API: 201 Created (JSON Response)
+    API-->>Frontend: Returns success
+    Frontend->>Frontend: Updates local state (Expenses list)
+    Frontend-->>User: Shows Success Toast & updates UI
 ```
 
 ## 🔒 Security Best Practices Implemented
