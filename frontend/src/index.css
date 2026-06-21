@@ -68,7 +68,7 @@
   }
 
   .premium-input {
-    @apply w-full px-4 py-2.5 bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-xl outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-200;
+    @apply w-full px-4 py-2.5 bg-white dark:bg-surface-900 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 border border-surface-200 dark:border-surface-800 rounded-xl outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all duration-200;
   }
 
   .nav-link {
