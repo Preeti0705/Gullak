@@ -1,0 +1,140 @@
+# ─── FinTrack Docker Compose ──────────────────────────
+# Full multi-container deployment with MongoDB, Redis, API, and Frontend
+#
+# Usage:
+#   docker compose up --build       # Build and start all services
+#   docker compose up -d            # Start in detached mode
+#   docker compose down             # Stop all services
+#   docker compose logs api -f      # Follow API logs
+#   docker compose exec api node seeds/seed.js  # Seed database
+
+services:
+  # ─── MongoDB ──────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: fintrack-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: fintrack
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - fintrack-network
+
+  # ─── Redis ────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: fintrack-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fintrack-network
+
+  # ─── Redis Commander (Dev GUI) ────────────────────────
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: fintrack-redis-gui
+    restart: unless-stopped
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - fintrack-network
+    profiles:
+      - dev
+
+  # ─── Backend API ──────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fintrack-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGO_URI: mongodb://mongo:27017/fintrack
+      MONGO_POOL_SIZE: 20
+      JWT_SECRET: ${JWT_SECRET:-fintrack_docker_secret_change_me}
+      JWT_EXPIRE: 30d
+      CLIENT_URL: http://localhost:3000
+      REDIS_URL: redis://redis:6379
+      ENABLE_CACHE: "true"
+      ENABLE_AI: "true"
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX: 200
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - api_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - fintrack-network
+
+  # ─── Frontend (Nginx) ─────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:5000/api
+    container_name: fintrack-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - fintrack-network
+
+# ─── Volumes ─────────────────────────────────────────
+volumes:
+  mongo_data:
+    driver: local
+  redis_data:
+    driver: local
+  api_uploads:
+    driver: local
+
+# ─── Network ─────────────────────────────────────────
+networks:
+  fintrack-network:
+    driver: bridge

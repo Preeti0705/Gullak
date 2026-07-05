@@ -29,6 +29,7 @@ import { dashboardService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
+import AiInsightsCard from '../components/dashboard/AiInsightsCard';
 
 const Dashboard = () => {
   const [data, setData] = useState(null);
@@ -179,34 +180,7 @@ const Dashboard = () => {
         </div>
 
         {/* AI Insights */}
-        <div className="glass-card p-6 flex flex-col">
-          <div className="flex items-center gap-2 mb-6 text-brand-600 dark:text-brand-400">
-            <Zap className="w-5 h-5 fill-current" />
-            <h3 className="text-lg font-bold">AI Financial Insights</h3>
-          </div>
-          <div className="flex-1 space-y-4">
-            {insights.map((insight, idx) => (
-              <motion.div 
-                key={idx}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className={`p-4 rounded-2xl border flex gap-3 ${
-                  insight.type === 'positive' ? 'bg-emerald-50 border-emerald-100 dark:bg-emerald-900/10 dark:border-emerald-900/20 text-emerald-800 dark:text-emerald-300' :
-                  insight.type === 'danger' ? 'bg-rose-50 border-rose-100 dark:bg-rose-900/10 dark:border-rose-900/20 text-rose-800 dark:text-rose-300' :
-                  insight.type === 'warning' ? 'bg-amber-50 border-amber-100 dark:bg-amber-900/10 dark:border-amber-900/20 text-amber-800 dark:text-amber-300' :
-                  'bg-brand-50 border-brand-100 dark:bg-brand-900/10 dark:border-brand-900/20 text-brand-800 dark:text-brand-300'
-                }`}
-              >
-                <span className="text-xl">{insight.icon}</span>
-                <p className="text-sm font-medium leading-relaxed">{insight.message}</p>
-              </motion.div>
-            ))}
-          </div>
-          <button className="mt-6 text-sm font-bold text-brand-600 hover:text-brand-700 uppercase tracking-widest flex items-center gap-2">
-            View All Insights <ArrowUpRight className="w-4 h-4" />
-          </button>
-        </div>
+        <AiInsightsCard />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

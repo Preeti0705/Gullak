@@ -157,4 +157,23 @@ export const notificationService = {
   }
 };
 
+export const aiService = {
+  getInsights: async () => {
+    const response = await api.post('/ai/insights');
+    return response.data;
+  },
+  getSuggestions: async (title) => {
+    const response = await api.post('/ai/suggest', { title });
+    return response.data;
+  },
+  query: async (question) => {
+    const response = await api.post('/ai/query', { question });
+    return response.data;
+  },
+  getStatus: async () => {
+    const response = await api.get('/ai/status');
+    return response.data;
+  }
+};
+
 export default api;

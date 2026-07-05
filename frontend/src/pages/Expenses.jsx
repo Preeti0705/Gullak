@@ -11,9 +11,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
-import { expenseService } from '../services/api';
+import { expenseService, incomeService, aiService } from '../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -257,6 +258,42 @@ const TransactionModal = ({ type, isOpen, onClose, onSuccess, expense, categorie
     paymentMethod: 'cash'
   });
   const [loading, setLoading] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestionCache, setSuggestionCache] = useState({});
+
+  // Debounced AI suggestion fetcher
+  useEffect(() => {
+    if (type !== 'expense' || !formData.title || formData.title.length < 3 || expense) return;
+
+    const timer = setTimeout(async () => {
+      // Check cache first to save API calls
+      if (suggestionCache[formData.title.toLowerCase()]) return;
+
+      setSuggesting(true);
+      try {
+        const response = await aiService.getSuggestions(formData.title);
+        if (response.success && response.data.suggestion) {
+          const { suggestedCategory, suggestedAmount, note } = response.data.suggestion;
+          
+          setFormData(prev => ({
+            ...prev,
+            category: suggestedCategory && categories.includes(suggestedCategory) ? suggestedCategory : prev.category,
+            amount: !prev.amount && suggestedAmount ? suggestedAmount : prev.amount,
+            notes: !prev.notes && note ? note : prev.notes
+          }));
+          
+          // Cache the title so we don't re-fetch
+          setSuggestionCache(prev => ({ ...prev, [formData.title.toLowerCase()]: true }));
+        }
+      } catch (error) {
+        console.error('Failed to get AI suggestions', error);
+      } finally {
+        setSuggesting(false);
+      }
+    }, 800); // 800ms debounce
+
+    return () => clearTimeout(timer);
+  }, [formData.title, type, expense, categories]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -305,7 +342,10 @@ const TransactionModal = ({ type, isOpen, onClose, onSuccess, expense, categorie
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
-                <label className="block text-sm font-semibold text-surface-700 dark:text-surface-300 mb-2">Title</label>
+                <label className="flex items-center gap-2 text-sm font-semibold text-surface-700 dark:text-surface-300 mb-2">
+                  Title
+                  {suggesting && <Sparkles className="w-3.5 h-3.5 text-brand-500 animate-pulse" />}
+                </label>
                 <input 
                   type="text" 
                   required

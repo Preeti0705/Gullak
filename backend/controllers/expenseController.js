@@ -1,6 +1,17 @@
 const Expense = require('../models/Expense');
 const Budget = require('../models/Budget');
 const Notification = require('../models/Notification');
+const { invalidateCache } = require('../config/redisClient');
+
+/**
+ * Helper: Invalidate all cached data for a user after a write operation
+ */
+const invalidateUserCache = async (userId) => {
+  await Promise.all([
+    invalidateCache(`cache:${userId}:*`),
+    invalidateCache(`ai:insights:${userId}`),
+  ]);
+};
 
 /**
  * Expense Controller - Full CRUD with filtering, pagination, and budget tracking
@@ -113,6 +124,9 @@ exports.createExpense = async (req, res, next) => {
       await overallBudget.save();
     }
 
+    // Invalidate cached dashboard + AI insights
+    await invalidateUserCache(req.user._id.toString());
+
     res.status(201).json({ success: true, data: expense });
   } catch (error) {
     next(error);
@@ -164,6 +178,9 @@ exports.updateExpense = async (req, res, next) => {
       }
     }
 
+    // Invalidate cached dashboard + AI insights
+    await invalidateUserCache(req.user._id.toString());
+
     res.json({ success: true, data: expense });
   } catch (error) {
     next(error);
@@ -204,6 +221,10 @@ exports.deleteExpense = async (req, res, next) => {
     }
 
     await expense.deleteOne();
+
+    // Invalidate cached dashboard + AI insights
+    await invalidateUserCache(req.user._id.toString());
+
     res.json({ success: true, message: 'Expense deleted' });
   } catch (error) {
     next(error);

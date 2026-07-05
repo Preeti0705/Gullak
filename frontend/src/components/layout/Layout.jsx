@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import AiChatWidget from '../ai/AiChatWidget';
 
 const Layout = () => {
   const { user, loading } = useAuth();
@@ -53,6 +54,9 @@ const Layout = () => {
           </p>
         </footer>
       </div>
+      
+      {/* Global AI Chat Widget for authenticated users */}
+      <AiChatWidget />
     </div>
   );
 };

@@ -1,4 +1,15 @@
 const Income = require('../models/Income');
+const { invalidateCache } = require('../config/redisClient');
+
+/**
+ * Helper: Invalidate all cached data for a user after a write operation
+ */
+const invalidateUserCache = async (userId) => {
+  await Promise.all([
+    invalidateCache(`cache:${userId}:*`),
+    invalidateCache(`ai:insights:${userId}`),
+  ]);
+};
 
 /**
  * Income Controller - Full CRUD with filtering and pagination
@@ -41,6 +52,7 @@ exports.createIncome = async (req, res, next) => {
   try {
     req.body.user = req.user._id;
     const income = await Income.create(req.body);
+    await invalidateUserCache(req.user._id.toString());
     res.status(201).json({ success: true, data: income });
   } catch (error) {
     next(error);
@@ -56,6 +68,7 @@ exports.updateIncome = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Income not found' });
     }
     income = await Income.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    await invalidateUserCache(req.user._id.toString());
     res.json({ success: true, data: income });
   } catch (error) {
     next(error);
@@ -71,6 +84,7 @@ exports.deleteIncome = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Income not found' });
     }
     await income.deleteOne();
+    await invalidateUserCache(req.user._id.toString());
     res.json({ success: true, message: 'Income deleted' });
   } catch (error) {
     next(error);

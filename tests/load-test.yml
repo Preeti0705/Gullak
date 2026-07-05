@@ -1,0 +1,114 @@
+config:
+  target: "http://localhost:5000"
+  phases:
+    - duration: 60
+      arrivalRate: 5
+      name: "Warm up"
+    - duration: 120
+      arrivalRate: 5
+      rampTo: 50
+      name: "Ramp up load"
+    - duration: 300
+      arrivalRate: 50
+      name: "Sustained peak load"
+  environments:
+    production:
+      target: "https://api.fintrack.example.com"
+  
+  # Ensure variables are randomized for uniqueness
+  variables:
+    randomId:
+      - "{{ $randomNumber(1000, 99999) }}"
+  
+  # Global plugins
+  plugins:
+    metrics-by-endpoint: {}
+
+scenarios:
+  - name: "User Flow: Login -> Dashboard -> Add Expense -> Check AI"
+    weight: 7
+    flow:
+      # 1. Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "demo@fintrack.com"
+            password: "demo123456"
+          capture:
+            - json: "$.token"
+              as: "token"
+          expect:
+            - statusCode: 200
+
+      # 2. View Dashboard (Heavy aggregation, should hit Redis cache)
+      - get:
+          url: "/api/dashboard"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
+      
+      # 3. Simulate think time
+      - think: 3
+
+      # 4. Ask AI a question
+      - post:
+          url: "/api/ai/query"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            question: "How much did I spend on food this month?"
+          expect:
+            - statusCode: 200
+            
+      # 5. Think time
+      - think: 2
+
+      # 6. Add an expense
+      - post:
+          url: "/api/expenses"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          json:
+            title: "Load Test Coffee {{ randomId }}"
+            amount: 5.50
+            category: "food"
+            paymentMethod: "credit_card"
+          expect:
+            - statusCode: 201
+
+      # 7. View Dashboard again (Cache should be invalidated, new data fetched)
+      - get:
+          url: "/api/dashboard"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
+
+  - name: "User Flow: Browse Expenses & Reports"
+    weight: 3
+    flow:
+      - post:
+          url: "/api/auth/login"
+          json:
+            email: "demo@fintrack.com"
+            password: "demo123456"
+          capture:
+            - json: "$.token"
+              as: "token"
+
+      - get:
+          url: "/api/expenses?page=1&limit=20"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
+            
+      - think: 2
+      
+      - get:
+          url: "/api/expenses?page=2&limit=20"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
